@@ -31,6 +31,18 @@ function is_ubuntu1604()
     fi
 }
 
+
+# 判断是否是Debian版本
+function is_debian()
+{
+    version=$(lsb_release -is)
+    if [ "${version}" == "Debian" ]; then
+        echo 1
+    else
+        echo 0
+    fi
+}
+
 # 在ubuntu上源代码安装vim
 function compile_vim_on_ubuntu()
 {
@@ -114,15 +126,20 @@ function install_prepare_software_on_centos()
 # 安装ubuntu发行版必要软件
 function install_prepare_software_on_ubuntu()
 {
-    sudo apt-get install -y ctags build-essential cmake python-dev python3-dev fontconfig curl libfile-next-perl ack-grep
+    sudo apt-get update
+    sudo apt-get install -y ctags build-essential cmake python python-dev python3-dev fontconfig curl libfile-next-perl ack-grep
     ubuntu_1604=`is_ubuntu1604`
+    debian=`is_debian`
     echo ${ubuntu_1604}
 
     if [ ${ubuntu_1604} == 1 ]; then
-        echo "ubuntu 16.04 LTS"
+        echo "Ubuntu 16.04 LTS"
+        compile_vim_on_ubuntu
+    elif [ ${debian} == 1 ]; then
+        echo "Debian"
         compile_vim_on_ubuntu
     else
-        echo "not ubuntu 16.04 LTS"
+        echo "Not ubuntu 16.04 LTS"
         sudo apt-get install -y vim
     fi
 }
@@ -189,11 +206,31 @@ function compile_ycm_on_linux()
     ./install.py --clang-completer
 }
 
-# mac编译ycm插件
-function compile_ycm_on_mac()
+# macos编译ycm, 原始方法
+function compile_ycm_on_mac_legacy()
 {
     cd ~/.vim/plugged/YouCompleteMe
     ./install.py --clang-completer --system-libclang
+}
+
+# macos编译ycm, Mojave上的方法
+function compile_ycm_on_mac_mojave()
+{
+    echo "Installing macOS_10.14 sdk headers..."
+    xcode-select --install
+    open /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg
+    cd ~/.vim/plugged/YouCompleteMe
+    ./install.py --clang-completer
+}
+
+# 在MacOS上编译ycm
+function compile_ycm_on_mac()
+{
+    mac_version=$(sw_vers | grep ProductVersion | cut -d '.' -f 2 -f 3)
+    fix_macos_version_list=(14.1 14.2 14.3 14.4)
+    echo "${fix_macos_version_list[@]}" | grep -wq "$mac_version" && \
+        compile_ycm_on_mac_mojave || \
+        compile_ycm_on_mac_legacy
 }
 
 # 打印logo
@@ -263,7 +300,7 @@ function install_vimplus_on_archlinux()
 function install_vimplus_on_linux()
 {
     type=`get_linux_platform_type`
-    echo "linux platform type: "${type}
+    echo "Linux platform type: "${type}
 
     if [ ${type} == "ubuntu" ]; then
         install_vimplus_on_ubuntu
@@ -272,7 +309,7 @@ function install_vimplus_on_linux()
     elif [ ${type} == "archlinux" ]; then
         install_vimplus_on_archlinux
     else
-        echo "not support this linux platform type: "${type}
+        echo "Not support this linux platform type: "${type}
     fi
 }
 
@@ -280,14 +317,14 @@ function install_vimplus_on_linux()
 function main()
 {
     type=`get_platform_type`
-    echo "platform type: "${type}
+    echo "Platform type: "${type}
 
     if [ ${type} == "Darwin" ]; then 
         install_vimplus_on_mac
     elif [ ${type} == "Linux" ]; then
         install_vimplus_on_linux
     else
-        echo "not support platform type: "${type}
+        echo "Not support platform type: "${type}
     fi
 }
 
